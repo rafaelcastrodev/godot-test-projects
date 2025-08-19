@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://c2qqimuh2vjuf"]
+
+[ext_resource type="Script" uid="uid://clyyex1ubetm" path="res://flapbird/pipe.gd" id="1_eyfpm"]
+[ext_resource type="Texture2D" uid="uid://bnudnsqtig3df" path="res://icon.svg" id="1_os0wh"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_eyfpm"]
+size = Vector2(38, 300)
+
+[node name="Pipe" type="Area2D"]
+script = ExtResource("1_eyfpm")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(-57, -244)
+scale = Vector2(0.891, 7.03125)
+texture = ExtResource("1_os0wh")
+centered = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 206)
+scale = Vector2(3, 3)
+shape = SubResource("RectangleShape2D_eyfpm")

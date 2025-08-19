@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3 uid="uid://rsfevvesaa13"]
+
+[ext_resource type="Script" uid="uid://c81l8hqr7etqr" path="res://flapbird/pipes.gd" id="1_gfcjc"]
+[ext_resource type="PackedScene" uid="uid://c2qqimuh2vjuf" path="res://flapbird/pipe.tscn" id="2_3y0i6"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_nvlkw"]
+size = Vector2(2, 312)
+
+[node name="Pipes" type="Node2D"]
+script = ExtResource("1_gfcjc")
+
+[node name="TopPipe" parent="." instance=ExtResource("2_3y0i6")]
+position = Vector2(0, -410)
+scale = Vector2(1, -1)
+
+[node name="BottomPipe" parent="." instance=ExtResource("2_3y0i6")]
+position = Vector2(0, 410)
+
+[node name="ScoreDetection" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ScoreDetection"]
+position = Vector2(57, 0)
+shape = SubResource("RectangleShape2D_nvlkw")
+debug_color = Color(0.850907, 0.118383, 0.851189, 0.42)
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+modulate = Color(0.770765, 0.024112, 0.66171, 1)
+position = Vector2(62, 0)
+scale = Vector2(0.2, 0.2)

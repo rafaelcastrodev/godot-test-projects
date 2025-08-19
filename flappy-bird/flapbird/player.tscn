@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://djuambb13mx72"]
+
+[ext_resource type="Texture2D" uid="uid://bnudnsqtig3df" path="res://icon.svg" id="1_dvb0b"]
+[ext_resource type="Script" uid="uid://cry1viexiwx86" path="res://flapbird/player.gd" id="1_pk4wl"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pk4wl"]
+size = Vector2(112, 112)
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_pk4wl")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(-64, -64)
+texture = ExtResource("1_dvb0b")
+centered = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_pk4wl")
+debug_color = Color(0.349061, 0.619693, 0, 0.42)
