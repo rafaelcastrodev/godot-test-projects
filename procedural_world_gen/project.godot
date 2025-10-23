@@ -22,6 +22,10 @@ window/size/viewport_height=1080
 window/size/window_width_override=960
 window/size/window_height_override=540
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/script-ide/plugin.cfg")
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
