@@ -74,7 +74,7 @@ tile_set = ExtResource("1_80nbo")
 tile_set = ExtResource("1_80nbo")
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
-position = Vector2(140, 236)
+position = Vector2(350, 236)
 script = SubResource("GDScript_fc0e3")
 
 [node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]

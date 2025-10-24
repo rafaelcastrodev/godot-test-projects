@@ -5,7 +5,7 @@ extends Node
 
 var terrain_noise: Noise;
 var vegetation_noise: Noise;
-var terrain_noise_seed: int = 2;
+var terrain_noise_seed: int = 0;
 var terrain_noise_value_array: Array[float] = [];
 var width: int = 100;
 var height: int = 100;
@@ -15,8 +15,9 @@ var y_start_render: Vector2i = Vector2i.ZERO;
 var water_noise_value_threshold: float = 0.0;
 var ground_noise_value_threshold: float = 0.0;
 var trees_noise_value_threshold: float = 0.2;
-var grass_noise_value_threshold: float = 0.05;
-var grass_placement_density: float = 0.3; # 40% chance to place grass
+var grass_noise_value_threshold: float = 0.03;
+var grass_placement_density: float = 0.2; # % chance to place grass
+var trees_placement_density: float = 0.1; # % chance to place trees
 
 var tile_source_id: int = 0;
 var water_atlas_coord: Vector2i = Vector2i(1,2);
@@ -27,6 +28,7 @@ var trees_atlas_coord: Vector2i = Vector2i(8,0);
 var water_layer_terrain_set_index: int = 0;
 var water_layer_terrain_index: int = 0;
 
+
 var grass_atlas_coord_array: Array[Dictionary] = [
 	{ "coords": Vector2i(1,0), "weight": 5},
 	{ "coords": Vector2i(2,0), "weight": 3},
@@ -36,10 +38,10 @@ var grass_atlas_coord_array: Array[Dictionary] = [
 ];
 
 var trees_atlas_coord_array: Array[Dictionary] = [
-	{ "coords": Vector2i(6,0), "weight": 1},
+	{ "coords": Vector2i(6,0), "weight": 0},
 	{ "coords": Vector2i(7,0), "weight": 1},
-	{ "coords": Vector2i(8,0), "weight": 1},
-	{ "coords": Vector2i(9,0), "weight": 1},
+	{ "coords": Vector2i(8,0), "weight": 3},
+	{ "coords": Vector2i(9,0), "weight": 0.2},
 ];
 
 var water_tiles_array: Array[Vector2i] = [];
@@ -55,7 +57,7 @@ var trees_tiles_array: Array[Vector2i] = [];
 
 func _ready() -> void:
 	randomize();
-	#terrain_noise_seed = randi();
+	terrain_noise_seed = randi();
 	terrain_noise = terrain_noise_texture.noise;
 	terrain_noise.seed = terrain_noise_seed;
 
@@ -72,37 +74,40 @@ func _ready() -> void:
 
 func generate_world() -> void:
 
-	terrain_noise_value_array = [];
+	#terrain_noise_value_array = [];
 	var tile_coords: Vector2i = Vector2i.ZERO;
 
 	for x in range(x_start_render.x, x_start_render.y):
 		for y in range(y_start_render.x, y_start_render.y):
+			randomize();
 			var noise_value = terrain_noise.get_noise_2d(x,y);
 			tile_coords.x = x;
 			tile_coords.y = y;
 
-			terrain_noise_value_array.append(noise_value);
+			## Under normal circunstances ground is above water, but this time I want all ground bellow
+			## ground_layer.set_cell( tile_coords, tile_source_id, ground_atlas_coord);
 
-			if noise_value >= ground_noise_value_threshold: # place land
-				## Normal circunstances ground is above water, but this time I want all ground bellow
-				#ground_layer.set_cell( tile_coords, tile_source_id, ground_atlas_coord);
+			## place land
+			if noise_value >= ground_noise_value_threshold:
+				var is_ground_filled: bool = false;
 
+				## place trees
 				if noise_value >= trees_noise_value_threshold:
-					trees_tiles_array.append(tile_coords);
-					trees_layer.set_cell( tile_coords, tile_source_id, trees_atlas_coord);
-				elif noise_value >= grass_noise_value_threshold:
-					if randf() < grass_placement_density:
-						var chosen_grass: Dictionary = pick_weighted_random(grass_atlas_coord_array);
-						grass_tiles_array.append(tile_coords);
-						grass_layer.set_cell(
-							tile_coords,
-							tile_source_id,
-							chosen_grass.coords
-						);
+					if randf() < trees_placement_density:
+						_place_tree_tile(tile_coords);
+						is_ground_filled = true;
+					else:
+						is_ground_filled = _place_density_grass_tile(tile_coords);
 				else:
+					## place grass
+					is_ground_filled = _place_density_grass_tile(tile_coords);
+
+				## register non filled ground
+				if not is_ground_filled:
 					ground_tiles_array.append(tile_coords);
 
-			else:  # place water
+			## place water
+			else:
 				water_tiles_array.append(tile_coords);
 			#} endif
 
@@ -118,8 +123,33 @@ func generate_world() -> void:
 	);
 #}
 
+func _place_tree_tile(tile_coords: Vector2i) -> void:
+	var chosen_tree: Dictionary = _pick_weighted_random(trees_atlas_coord_array);
+	trees_tiles_array.append(tile_coords);
+	trees_layer.set_cell(
+		tile_coords,
+		tile_source_id,
+		chosen_tree.coords
+	);
+#}
 
-func pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
+func _place_density_grass_tile(tile_coords: Vector2i) -> bool:
+	var is_tile_placed: bool = false;
+	if randf() < grass_placement_density:
+		var chosen_grass: Dictionary = _pick_weighted_random(grass_atlas_coord_array);
+		grass_tiles_array.append(tile_coords);
+		grass_layer.set_cell(
+			tile_coords,
+			tile_source_id,
+			chosen_grass.coords
+		);
+		is_tile_placed = true;
+
+	return is_tile_placed;
+#}
+
+func _pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
+	randomize();
 	var total_weight: float = 0.0;
 	for item in array:
 		total_weight += item.weight;
@@ -136,11 +166,7 @@ func pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
 #}
 
 
-"""
-===========================================
-			DEBUG FEATURES
-===========================================
-"""
+""" ============== DEBUG FEATURES ============== """
 #region
 
 @onready var camera_2d: Camera2D = $"../CharacterBody2D/Camera2D";
