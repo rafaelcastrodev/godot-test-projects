@@ -87,7 +87,6 @@ script = SubResource("GDScript_fc0e3")
 
 [node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
 offset = Vector2(8, 8)
-zoom = Vector2(3, 3)
 metadata/_edit_lock_ = true
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]

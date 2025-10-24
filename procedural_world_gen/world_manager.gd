@@ -6,12 +6,17 @@ extends Node
 var noise: Noise;
 var noise_seed: int = 1;
 var noise_value_array: Array[float] = [];
-var width: int = 180;
+var width: int = 480;
 var height: int = 270;
 var x_start_render: Vector2i = Vector2i.ZERO;
 var y_start_render: Vector2i = Vector2i.ZERO;
 
-var source_id: int = 0;
+var water_noise_value_threshold: float = 0.0;
+var ground_noise_value_threshold: float = 0.0;
+var trees_noise_value_threshold: float = 0.2;
+var grass_noise_value_threshold: float = 0.05;
+
+var tile_source_id: int = 0;
 var water_atlas_coord: Vector2i = Vector2i(1,2);
 var ground_atlas_coord: Vector2i = Vector2i(0,0);
 var grass_atlas_coord: Vector2i = Vector2i(1,0);
@@ -19,6 +24,21 @@ var trees_atlas_coord: Vector2i = Vector2i(8,0);
 
 var water_layer_terrain_set_index: int = 0;
 var water_layer_terrain_index: int = 0;
+
+var grass_atlas_coord_array: Array[Dictionary] = [
+	{ "coords": Vector2i(1,0), "weight": 1},
+	{ "coords": Vector2i(2,0), "weight": 1},
+	{ "coords": Vector2i(3,0), "weight": 1},
+	{ "coords": Vector2i(4,0), "weight": 1},
+	{ "coords": Vector2i(5,0), "weight": 1},
+];
+
+var trees_atlas_coord_array: Array[Dictionary] = [
+	{ "coords": Vector2i(6,0), "weight": 1},
+	{ "coords": Vector2i(7,0), "weight": 1},
+	{ "coords": Vector2i(8,0), "weight": 1},
+	{ "coords": Vector2i(9,0), "weight": 1},
+];
 
 var water_tiles_array: Array[Vector2i] = [];
 var ground_tiles_array: Array[Vector2i] = [];
@@ -33,7 +53,7 @@ var trees_tiles_array: Array[Vector2i] = [];
 
 func _ready() -> void:
 	randomize();
-	#noise_seed = randi();
+	noise_seed = randi();
 	noise = noise_height_texture.noise;
 	noise.seed = noise_seed;
 
@@ -51,31 +71,58 @@ func _ready() -> void:
 func generate_world() -> void:
 
 	noise_value_array = [];
+	var tile_coords: Vector2i = Vector2i.ZERO;
 
 	for x in range(x_start_render.x, x_start_render.y):
 		for y in range(y_start_render.x, y_start_render.y):
-
 			var noise_value = noise.get_noise_2d(x,y);
+			tile_coords.x = x;
+			tile_coords.y = y;
+
 			noise_value_array.append(noise_value);
 
-			if noise_value >= 0.0: # place land
+			if noise_value >= ground_noise_value_threshold: # place land
 				## Normal circunstances ground is above water, but this time I want all ground bellow
-				#ground_tiles_array.append(Vector2i(x,y));
-				#ground_layer.set_cell( Vector2i(x,y), source_id, ground_atlas_coord);
+				#ground_layer.set_cell( tile_coords, tile_source_id, ground_atlas_coord);
 
-				if noise_value > 0.1:
-					grass_tiles_array.append(Vector2i(x,y));
-					grass_layer.set_cell( Vector2i(x,y), source_id, grass_atlas_coord);
+				if noise_value >= trees_noise_value_threshold:
+					trees_tiles_array.append(tile_coords);
+					trees_layer.set_cell( tile_coords, tile_source_id, trees_atlas_coord);
+				elif noise_value >= grass_noise_value_threshold:
+					grass_tiles_array.append(tile_coords);
+					grass_layer.set_cell( tile_coords, tile_source_id, grass_atlas_coord_array.pick_random().coords);
+				else:
+					ground_tiles_array.append(tile_coords);
 
-				if noise_value > 0.2:
-					trees_tiles_array.append(Vector2i(x,y));
-					trees_layer.set_cell( Vector2i(x,y), source_id, trees_atlas_coord);
-			elif noise_value < 0.0:  # place water
-				water_tiles_array.append(Vector2i(x,y));
+			else:  # place water
+				water_tiles_array.append(tile_coords);
 			#} endif
 
 		#} endfor y
 	#} endfor x
 
+	#print(noise_value_array.min()) # -0.6
+	#print(noise_value_array.max()) # 0.6
 	water_layer.set_cells_terrain_connect(water_tiles_array, water_layer_terrain_set_index, water_layer_terrain_index);
 #}
+
+
+"""
+===========================================
+			DEBUG FEATURES
+===========================================
+"""
+#region
+
+@onready var camera_2d: Camera2D = $"../CharacterBody2D/Camera2D";
+
+func _input(_event: InputEvent) -> void:
+	if Input.is_action_just_pressed("zoom_in"):
+		var zoom_val = camera_2d.zoom.x + 0.1;
+		camera_2d.zoom = Vector2(zoom_val, zoom_val)
+	if Input.is_action_just_pressed("zoom_out"):
+		var zoom_val = camera_2d.zoom.x - 0.1;
+		camera_2d.zoom = Vector2(zoom_val, zoom_val)
+#}
+
+#endregion
