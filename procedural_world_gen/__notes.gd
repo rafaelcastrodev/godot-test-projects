@@ -6,4 +6,5 @@ extends Node
 3. Color Ramp para melhor visualização dos valores (Interpolation > Mode constant)
 4. Ajustar o valor de frequency = zoom in/out do noise, aumentando/diminuindo as land masses (menos é mais land)
 5. Ajustar o z-index das layers (Ordering > Z Index)
+6. Novo Noise apenas para árvores
 """

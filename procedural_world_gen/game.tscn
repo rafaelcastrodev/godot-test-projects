@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://bx5017jm23m3x"]
+[gd_scene load_steps=10 format=3 uid="uid://bx5017jm23m3x"]
 
 [ext_resource type="TileSet" uid="uid://khjsslhl4iuh" path="res://assets/tiles.tres" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://bog8mv1lk6myy" path="res://__notes.gd" id="1_feb5d"]
@@ -6,32 +6,24 @@
 [ext_resource type="Texture2D" uid="uid://ba7fpmkkx5vo5" path="res://assets/bg_dark_layer.png" id="3_7jktm"]
 [ext_resource type="Texture2D" uid="uid://b2x21aovyn1qv" path="res://icon.svg" id="4_fc0e3"]
 
-[sub_resource type="Gradient" id="Gradient_feb5d"]
-interpolation_mode = 1
-offsets = PackedFloat32Array(0, 0.3, 0.5, 0.9)
-colors = PackedColorArray(0, 0, 1, 1, 1, 0.50980395, 0.29803923, 1, 0.72156864, 0.84705883, 0, 1, 0.44896096, 0.26152113, 0.12849817, 1)
-metadata/_snap_enabled = true
-
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_7jktm"]
-seed = 1
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_ryrav"]
 noise = SubResource("FastNoiseLite_7jktm")
-color_ramp = SubResource("Gradient_feb5d")
 
 [sub_resource type="GDScript" id="GDScript_fc0e3"]
 script/source = "extends CharacterBody2D
 
 # How fast the player moves (in pixels per second).
 # You can change this value in the Inspector.
-@export var speed = 300.0
+@export var speed = 4000.0
 
-func _physics_process(_delta):
+func _physics_process(delta: float):
 
 	var input_direction = Input.get_vector(\"ui_left\", \"ui_right\", \"ui_up\", \"ui_down\")
 
 
-	velocity = input_direction * speed
+	velocity = input_direction * speed * delta
 
 
 	move_and_slide()
@@ -46,7 +38,7 @@ script = ExtResource("1_feb5d")
 
 [node name="WorldManager" type="Node" parent="."]
 script = ExtResource("2_fc0e3")
-noise_height_texture = SubResource("NoiseTexture2D_ryrav")
+terrain_noise_texture = SubResource("NoiseTexture2D_ryrav")
 
 [node name="Overworld" type="Node2D" parent="."]
 
@@ -82,11 +74,12 @@ tile_set = ExtResource("1_80nbo")
 tile_set = ExtResource("1_80nbo")
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
-position = Vector2(1008, 512)
+position = Vector2(140, 236)
 script = SubResource("GDScript_fc0e3")
 
 [node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
 offset = Vector2(8, 8)
+zoom = Vector2(2, 2)
 metadata/_edit_lock_ = true
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
