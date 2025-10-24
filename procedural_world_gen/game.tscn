@@ -1,8 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://bx5017jm23m3x"]
+[gd_scene load_steps=11 format=3 uid="uid://bx5017jm23m3x"]
 
 [ext_resource type="TileSet" uid="uid://khjsslhl4iuh" path="res://assets/tiles.tres" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://bog8mv1lk6myy" path="res://__notes.gd" id="1_feb5d"]
 [ext_resource type="Script" uid="uid://b6r1w7o37ah1i" path="res://world_manager.gd" id="2_fc0e3"]
+[ext_resource type="Texture2D" uid="uid://ba7fpmkkx5vo5" path="res://assets/bg_dark_layer.png" id="3_7jktm"]
 [ext_resource type="Texture2D" uid="uid://b2x21aovyn1qv" path="res://icon.svg" id="4_fc0e3"]
 
 [sub_resource type="Gradient" id="Gradient_feb5d"]
@@ -49,13 +50,29 @@ noise_height_texture = SubResource("NoiseTexture2D_ryrav")
 
 [node name="Overworld" type="Node2D" parent="."]
 
+[node name="BGDarkLayer" type="CanvasLayer" parent="Overworld"]
+layer = -2
+
+[node name="TextureRect" type="TextureRect" parent="Overworld/BGDarkLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_7jktm")
+expand_mode = 2
+stretch_mode = 1
+
 [node name="LayerWater" type="TileMapLayer" parent="Overworld"]
+z_index = -1
 tile_set = ExtResource("1_80nbo")
 
 [node name="LayerGround" type="TileMapLayer" parent="Overworld"]
+z_index = -1
 tile_set = ExtResource("1_80nbo")
 
 [node name="LayerGrass" type="TileMapLayer" parent="Overworld"]
+z_index = -1
 tile_set = ExtResource("1_80nbo")
 
 [node name="LayerTrees" type="TileMapLayer" parent="Overworld"]
@@ -70,7 +87,7 @@ script = SubResource("GDScript_fc0e3")
 
 [node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
 offset = Vector2(8, 8)
-zoom = Vector2(2, 2)
+zoom = Vector2(3, 3)
 metadata/_edit_lock_ = true
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
