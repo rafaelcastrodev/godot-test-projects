@@ -56,6 +56,7 @@ var trees_tiles_array: Array[Vector2i] = [];
 @onready var trees_layer: TileMapLayer = $"../Overworld/LayerTrees";
 
 func _ready() -> void:
+
 	randomize();
 	terrain_noise_seed = randi();
 	terrain_noise = terrain_noise_texture.noise;

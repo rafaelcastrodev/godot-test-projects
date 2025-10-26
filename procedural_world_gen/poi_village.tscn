@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3 uid="uid://dghi3y4ks1mmb"]
+
+[ext_resource type="Texture2D" uid="uid://b3103dhsac87f" path="res://assets/tiles.png" id="1_xu66r"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ul82v"]
+size = Vector2(16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6jrba"]
+atlas = ExtResource("1_xu66r")
+region = Rect2(180, 18, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_1jvnv"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6jrba")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="POI_Village" type="Area2D"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(8, 8)
+shape = SubResource("RectangleShape2D_ul82v")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CollisionShape2D"]
+sprite_frames = SubResource("SpriteFrames_1jvnv")

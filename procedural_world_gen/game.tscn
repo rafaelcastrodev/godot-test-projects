@@ -2,8 +2,8 @@
 
 [ext_resource type="TileSet" uid="uid://khjsslhl4iuh" path="res://assets/tiles.tres" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://bog8mv1lk6myy" path="res://__notes.gd" id="1_feb5d"]
-[ext_resource type="Script" uid="uid://b6r1w7o37ah1i" path="res://world_manager.gd" id="2_fc0e3"]
 [ext_resource type="Texture2D" uid="uid://ba7fpmkkx5vo5" path="res://assets/bg_dark_layer.png" id="3_7jktm"]
+[ext_resource type="Script" uid="uid://ccbktmutpsinj" path="res://chunk_world_manager.gd" id="3_ryrav"]
 [ext_resource type="Texture2D" uid="uid://b2x21aovyn1qv" path="res://icon.svg" id="4_fc0e3"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_7jktm"]
@@ -33,19 +33,10 @@ func _physics_process(delta: float):
 
 [node name="Game" type="Node2D"]
 
-[node name="__NOTES" type="Node" parent="."]
-script = ExtResource("1_feb5d")
-
-[node name="WorldManager" type="Node" parent="."]
-script = ExtResource("2_fc0e3")
-terrain_noise_texture = SubResource("NoiseTexture2D_ryrav")
-
-[node name="Overworld" type="Node2D" parent="."]
-
-[node name="BGDarkLayer" type="CanvasLayer" parent="Overworld"]
+[node name="BGDarkLayer" type="CanvasLayer" parent="."]
 layer = -2
 
-[node name="TextureRect" type="TextureRect" parent="Overworld/BGDarkLayer"]
+[node name="TextureRect" type="TextureRect" parent="BGDarkLayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -54,6 +45,17 @@ grow_vertical = 2
 texture = ExtResource("3_7jktm")
 expand_mode = 2
 stretch_mode = 1
+
+[node name="__NOTES" type="Node" parent="."]
+script = ExtResource("1_feb5d")
+
+[node name="WorldManager" type="Node" parent="." node_paths=PackedStringArray("player")]
+script = ExtResource("3_ryrav")
+player = NodePath("../CharacterBody2D")
+noise_texture = SubResource("NoiseTexture2D_ryrav")
+tile_set = ExtResource("1_80nbo")
+
+[node name="Overworld" type="Node2D" parent="."]
 
 [node name="LayerWater" type="TileMapLayer" parent="Overworld"]
 z_index = -1
@@ -70,8 +72,7 @@ tile_set = ExtResource("1_80nbo")
 [node name="LayerTrees" type="TileMapLayer" parent="Overworld"]
 tile_set = ExtResource("1_80nbo")
 
-[node name="LayerPOI" type="TileMapLayer" parent="Overworld"]
-tile_set = ExtResource("1_80nbo")
+[node name="LayerPOI" type="Node2D" parent="Overworld"]
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
 position = Vector2(350, 236)
