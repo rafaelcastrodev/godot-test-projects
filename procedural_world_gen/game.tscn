@@ -1,6 +1,5 @@
-[gd_scene load_steps=10 format=3 uid="uid://bx5017jm23m3x"]
+[gd_scene load_steps=9 format=3 uid="uid://bx5017jm23m3x"]
 
-[ext_resource type="TileSet" uid="uid://khjsslhl4iuh" path="res://assets/tiles.tres" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://bog8mv1lk6myy" path="res://__notes.gd" id="1_feb5d"]
 [ext_resource type="Texture2D" uid="uid://ba7fpmkkx5vo5" path="res://assets/bg_dark_layer.png" id="3_7jktm"]
 [ext_resource type="Script" uid="uid://ccbktmutpsinj" path="res://chunk_world_manager.gd" id="3_ryrav"]
@@ -53,26 +52,6 @@ script = ExtResource("1_feb5d")
 script = ExtResource("3_ryrav")
 player = NodePath("../CharacterBody2D")
 noise_texture = SubResource("NoiseTexture2D_ryrav")
-tile_set = ExtResource("1_80nbo")
-
-[node name="Overworld" type="Node2D" parent="."]
-
-[node name="LayerWater" type="TileMapLayer" parent="Overworld"]
-z_index = -1
-tile_set = ExtResource("1_80nbo")
-
-[node name="LayerGround" type="TileMapLayer" parent="Overworld"]
-z_index = -1
-tile_set = ExtResource("1_80nbo")
-
-[node name="LayerGrass" type="TileMapLayer" parent="Overworld"]
-z_index = -1
-tile_set = ExtResource("1_80nbo")
-
-[node name="LayerTrees" type="TileMapLayer" parent="Overworld"]
-tile_set = ExtResource("1_80nbo")
-
-[node name="LayerPOI" type="Node2D" parent="Overworld"]
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
 position = Vector2(350, 236)

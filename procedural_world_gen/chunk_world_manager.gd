@@ -5,7 +5,7 @@ extends Node
 
 @export var player: Node2D;
 @export var noise_texture: NoiseTexture2D;
-@export var tile_set: TileSet;
+#@export var tile_set: TileSet;
 
 const WORLD_CHUNK_SCENE := preload("res://world_chunk.tscn");
 const CHUNK_SIZE_TILES: int = 32;
@@ -66,12 +66,12 @@ var ground_tiles_array: Array[Vector2i] = [];
 var grass_tiles_array: Array[Vector2i] = [];
 var trees_tiles_array: Array[Vector2i] = [];
 
-@onready var overworld: Node2D = $"../Overworld";
-@onready var water_layer: TileMapLayer = $"../Overworld/LayerWater";
-@onready var ground_layer: TileMapLayer = $"../Overworld/LayerGround";
-@onready var grass_layer: TileMapLayer = $"../Overworld/LayerGrass";
-@onready var trees_layer: TileMapLayer = $"../Overworld/LayerTrees";
-@onready var poi_layer: Node2D = $"../Overworld/LayerPOI";
+#@onready var overworld: Node2D = $"../Overworld";
+#@onready var water_layer: TileMapLayer = $"../Overworld/LayerWater";
+#@onready var ground_layer: TileMapLayer = $"../Overworld/LayerGround";
+#@onready var grass_layer: TileMapLayer = $"../Overworld/LayerGrass";
+#@onready var trees_layer: TileMapLayer = $"../Overworld/LayerTrees";
+#@onready var poi_layer: Node2D = $"../Overworld/LayerPOI";
 
 ## ----- World State -----
 # The main dictionary that holds all generated chunk data.
@@ -91,7 +91,7 @@ func _ready() -> void:
 	#noise = FastNoiseLite.new()
 	#noise.seed = randi() # Use a random seed
 	#noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise_seed = randi();
+	#noise_seed = randi();
 	noise = noise_texture.noise;
 	noise.seed = noise_seed;
 
@@ -104,9 +104,9 @@ func _ready() -> void:
 	#@warning_ignore("integer_division")
 	#y_start_render = Vector2i(height * -1 / 2, height / 2);
 
-	water_layer.z_index = -1;
-	ground_layer.z_index = -1;
-	grass_layer.z_index = -1;
+	#water_layer.z_index = -1;
+	#ground_layer.z_index = -1;
+	#grass_layer.z_index = -1;
 #}
 
 
@@ -165,36 +165,35 @@ func load_chunk(chunk_coord: Vector2i):
 	var new_chunk_node: WorldChunk = WORLD_CHUNK_SCENE.instantiate();
 	new_chunk_node.name = "Chunk_%s_%s" % [chunk_coord.x, chunk_coord.y];
 	add_child(new_chunk_node);
-	new_chunk_node.initialize(chunk_data)
-	#new_chunk_node.tile_set = tile_set
+	new_chunk_node.initialize(chunk_data);
 
 	# Set the chunk's position in the world
 	new_chunk_node.position = get_world_pos_from_chunk_coords(chunk_coord);
-	return;
-	# 3. Set all the tiles based on the "terrain" data
-	var terrain_data = chunk_data["terrain"]
-	for local_tile_coord in terrain_data:
-		var atlas_coord = terrain_data[local_tile_coord]
 
-		## Set the cell: Layer 0, Source 0 (your first tileset)
-		new_chunk_node.set_cell(local_tile_coord, 0, atlas_coord)
+	# 3. Set all the tiles based on the "terrain" data
+	#var terrain_data = chunk_data["terrain"]
+	#for local_tile_coord in terrain_data:
+		#var atlas_coord = terrain_data[local_tile_coord]
+#
+		### Set the cell: Layer 0, Source 0 (your first tileset)
+		#new_chunk_node.set_cell(local_tile_coord, 0, atlas_coord)
 
 	# 4. Handle POIs (Points of Interest)
-	if chunk_data.has("poi") and chunk_data["poi"] != "":
-		var poi_path = chunk_data["poi"]
-
-		# Load the POI scene and instance it
-		var poi_scene = load(poi_path)
-		var poi_instance = poi_scene.instantiate()
-
-		# Add the POI as a child of the chunk
-		# This ensures it unloads with the chunk
-		new_chunk_node.add_child(poi_instance)
-
-		# Position the POI within the chunk
-		# (Here, we assume it's at the center of the chunk)
-		var center_pos = Vector2(CHUNK_SIZE_TILES, CHUNK_SIZE_TILES) * TILE_PIXELS / 2.0
-		poi_instance.position = center_pos
+	#if chunk_data.has("poi") and chunk_data["poi"] != "":
+		#var poi_path = chunk_data["poi"]
+#
+		## Load the POI scene and instance it
+		#var poi_scene = load(poi_path)
+		#var poi_instance = poi_scene.instantiate()
+#
+		## Add the POI as a child of the chunk
+		## This ensures it unloads with the chunk
+		#new_chunk_node.add_child(poi_instance)
+#
+		## Position the POI within the chunk
+		## (Here, we assume it's at the center of the chunk)
+		#var center_pos = Vector2(CHUNK_SIZE_TILES, CHUNK_SIZE_TILES) * TILE_PIXELS / 2.0
+		#poi_instance.position = center_pos
 
 	# 5. Add the chunk to the scene and our active list
 	active_chunks[chunk_coord] = new_chunk_node
