@@ -1,24 +1,19 @@
 [gd_scene load_steps=3 format=3 uid="uid://c235x5lt5altl"]
 
 [ext_resource type="Script" uid="uid://teka1xk4oatp" path="res://world_chunk.gd" id="1_kyhsy"]
-[ext_resource type="TileSet" uid="uid://g6m8tikxkaia" path="res://assets/tiles_water.tres" id="2_kyhsy"]
+[ext_resource type="TileSet" uid="uid://cylxcujxyjiaf" path="res://assets/tiles_vegetation.tres" id="3_smbfp"]
 
 [node name="WorldChunk" type="Node2D"]
 script = ExtResource("1_kyhsy")
 
-[node name="LayerWater" type="TileMapLayer" parent="."]
-z_index = -1
-tile_set = ExtResource("2_kyhsy")
-
 [node name="LayerGround" type="TileMapLayer" parent="."]
 z_index = -1
-tile_set = ExtResource("2_kyhsy")
 
 [node name="LayerGrass" type="TileMapLayer" parent="."]
 z_index = -1
-tile_set = ExtResource("2_kyhsy")
+tile_set = ExtResource("3_smbfp")
 
 [node name="LayerTrees" type="TileMapLayer" parent="."]
-tile_set = ExtResource("2_kyhsy")
+tile_set = ExtResource("3_smbfp")
 
 [node name="LayerPOI" type="Node2D" parent="."]

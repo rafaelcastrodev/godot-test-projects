@@ -28,3 +28,8 @@ shape = SubResource("RectangleShape2D_ul82v")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CollisionShape2D"]
 sprite_frames = SubResource("SpriteFrames_1jvnv")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(0.7808215, 0.00047187388, 0.7808161, 1)

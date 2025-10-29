@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://bx5017jm23m3x"]
+[gd_scene load_steps=8 format=3 uid="uid://bx5017jm23m3x"]
 
 [ext_resource type="Script" uid="uid://bog8mv1lk6myy" path="res://__notes.gd" id="1_feb5d"]
 [ext_resource type="Texture2D" uid="uid://ba7fpmkkx5vo5" path="res://assets/bg_dark_layer.png" id="3_7jktm"]
 [ext_resource type="Script" uid="uid://ccbktmutpsinj" path="res://chunk_world_manager.gd" id="3_ryrav"]
+[ext_resource type="TileSet" uid="uid://g6m8tikxkaia" path="res://assets/tiles_water.tres" id="4_7jktm"]
 [ext_resource type="Texture2D" uid="uid://b2x21aovyn1qv" path="res://icon.svg" id="4_fc0e3"]
 
 [sub_resource type="GDScript" id="GDScript_fc0e3"]
@@ -43,9 +44,13 @@ stretch_mode = 1
 [node name="__NOTES" type="Node" parent="."]
 script = ExtResource("1_feb5d")
 
-[node name="WorldManager" type="Node" parent="." node_paths=PackedStringArray("player")]
+[node name="WorldManager" type="Node2D" parent="." node_paths=PackedStringArray("player")]
 script = ExtResource("3_ryrav")
 player = NodePath("../CharacterBody2D")
+
+[node name="LayerWater" type="TileMapLayer" parent="WorldManager"]
+z_index = -1
+tile_set = ExtResource("4_7jktm")
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
 position = Vector2(350, 236)

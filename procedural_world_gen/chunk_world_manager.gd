@@ -4,57 +4,64 @@ CHUNK WORLD MANAGER
 extends Node
 
 @export var player: Node2D;
-@export var noise_texture: NoiseTexture2D;
 
 const WORLD_CHUNK_SCENE := preload("res://world_chunk.tscn");
 const CHUNK_SIZE_TILES: int = 32;
+const CHUNK_LOAD_RADIUS: int = 2;
+const TILE_SIZE_PIXELS: int = 16;
 
-const CHUNK_LOAD_RADIUS: int = 1;
-const TILE_PIXELS: int = 16;
+const GRASS_PLACEMENT_DENSITY: float = 0.2;
+const TREES_PLACEMENT_DENSITY: float = 0.1;
+const WATER_NOISE_VALUE_THRESHOLD: float = 0.0;
+const GROUND_NOISE_VALUE_THRESHOLD: float = 0.0;
+const TREES_NOISE_VALUE_THRESHOLD: float = 0.2;
+const GRASS_NOISE_VALUE_THRESHOLD: float = 0.03;
+const POI_NOISE_VALUE_THRESHOLD: float = 0.6;
+const POI_PLACEMENT_DENSITY: float = 0.05;
 
-var chunks_in_generation: Dictionary = {}; # Rastreia chunks em geração
+const GRASS_ATLAS_OPTIONS: Array[Dictionary] = [
+	{ "coords": Vector2i(0,0), "weight": 5},
+	{ "coords": Vector2i(1,0), "weight": 3},
+	{ "coords": Vector2i(2,0), "weight": 3},
+	{ "coords": Vector2i(3,0), "weight": 1},
+	{ "coords": Vector2i(4,0), "weight": 2},
+];
+
+const TREES_ATLAS_OPTIONS: Array[Dictionary] = [
+	{ "coords": Vector2i(5,0), "weight": 0},
+	{ "coords": Vector2i(6,0), "weight": 1},
+	{ "coords": Vector2i(7,0), "weight": 3},
+	{ "coords": Vector2i(8,0), "weight": 0.2},
+];
+
+const POI_OPTIONS: Array[Dictionary] = [
+	{
+		"scene": "res://poi_village.tscn",
+		"coords": Vector2i.ZERO,
+		"weight": 1
+	},
+];
+
+var chunks_in_generation: Dictionary = {};
 var world_data: Dictionary = {};
 var active_chunks: Dictionary = {};
 var current_player_chunk = Vector2i.ZERO;
+
 var noise: Noise;
-var grass_placement_density: float = 0.2;
-var trees_placement_density: float = 0.1;
-var water_tiles_array: Array[Vector2i] = [];
-var ground_tiles_array: Array[Vector2i] = [];
-var grass_tiles_array: Array[Vector2i] = [];
-var trees_tiles_array: Array[Vector2i] = [];
-var water_noise_value_threshold: float = 0.0;
-var ground_noise_value_threshold: float = 0.0;
-var trees_noise_value_threshold: float = 0.2;
-var grass_noise_value_threshold: float = 0.03;
 
-var grass_atlas_coord_array: Array[Dictionary] = [
-	{ "coords": Vector2i(1,0), "weight": 5},
-	{ "coords": Vector2i(2,0), "weight": 3},
-	{ "coords": Vector2i(3,0), "weight": 3},
-	{ "coords": Vector2i(4,0), "weight": 1},
-	{ "coords": Vector2i(5,0), "weight": 2},
-];
+var _water_changeset_chunks: Dictionary = {};
 
-var trees_atlas_coord_array: Array[Dictionary] = [
-	{ "coords": Vector2i(6,0), "weight": 0},
-	{ "coords": Vector2i(7,0), "weight": 1},
-	{ "coords": Vector2i(8,0), "weight": 3},
-	{ "coords": Vector2i(9,0), "weight": 0.2},
-];
-
-var poi_options: Array[Dictionary] = [
-	{ "path": "res://poi_village.tscn", "weight": 1},
-];
-
+@onready var water_layer: TileMapLayer = $LayerWater;
 
 func _ready() -> void:
 
 	randomize();
 
-	noise = FastNoiseLite.new()
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise = FastNoiseLite.new();
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH;
 	noise.seed = randi();
+
+	water_layer.z_index = -2;
 
 	current_player_chunk = get_chunk_coords_from_world(player.global_position);
 
@@ -69,23 +76,26 @@ func _process(_delta: float) -> void:
 	if new_player_chunk != current_player_chunk:
 		current_player_chunk = new_player_chunk;
 		update_chunks();
+
+	_paint_water_tiles();
 #}
 
 
+
 func update_chunks():
+
 	var desired_chunks = {};
 	var chunk_range = _get_current_chunk_range();
+
 	for x in range(chunk_range.horizontal.x, chunk_range.horizontal.y):
 		for y in range(chunk_range.vertical.x, chunk_range.vertical.y):
 
 			var chunk_coord = Vector2i(x, y);
 			desired_chunks[chunk_coord] = true;
 
-			# MODIFICADO: Só carrega se não estiver ativo E não estiver sendo gerado
 			if not active_chunks.has(chunk_coord) and not chunks_in_generation.has(chunk_coord):
-				load_chunk(chunk_coord)
-			#if not active_chunks.has(chunk_coord):
-				#load_chunk(chunk_coord);
+				load_chunk(chunk_coord);
+
 		#} endfor y
 	#} endfor x
 
@@ -99,55 +109,34 @@ func update_chunks():
 		unload_chunk(chunk_coord);
 #}
 
-# MODIFICADO: Agora decide se gera dados (thread) ou se instancia (imediato)
+
 func load_chunk(chunk_coord: Vector2i):
-	#var chunk_data: Dictionary;
 
 	if world_data.has(chunk_coord):
-		# Dados já existem, apenas instancie (rápido)
 		_instantiate_chunk(chunk_coord, world_data[chunk_coord]);
-		#chunk_data = world_data[chunk_coord];
 	else:
-		# Dados não existem, inicie um thread para gerar (lento)
-		chunks_in_generation[chunk_coord] = true; # Marca como "em geração"
-
 		var thread = Thread.new();
-		# Inicia o thread, chamando a função _generate_data_thread
-		# e passando chunk_coord como argumento
+		chunks_in_generation[chunk_coord] = thread;
 		thread.start(_generate_data_thread.bind(chunk_coord));
-
-	#var new_chunk_node: WorldChunk = WORLD_CHUNK_SCENE.instantiate();
-	#new_chunk_node.name = "Chunk_%s_%s" % [chunk_coord.x, chunk_coord.y];
-	#add_child(new_chunk_node);
-	#new_chunk_node.initialize(chunk_data);
-#
-	#new_chunk_node.position = get_world_pos_from_chunk_coords(chunk_coord);
-#
-	#active_chunks[chunk_coord] = new_chunk_node
 #}
 
 
-# NOVO: Esta função roda no Thread
 func _generate_data_thread(chunk_coord: Vector2i):
-	# 1. O trabalho pesado é feito aqui, fora da thread principal
-	var chunk_data = generate_chunk_data(chunk_coord);
 
-	# 2. Quando terminar, chama a função de callback na thread principal
-	# call_deferred() é essencial para garantir que o código rode
-	# de volta na thread principal de forma segura.
+	var chunk_data = generate_chunk_data(chunk_coord);
 	_on_data_generated.call_deferred(chunk_coord, chunk_data);
 #}
 
 
-# NOVO: Esta função roda de volta na Thread Principal
 func _on_data_generated(chunk_coord: Vector2i, chunk_data: Dictionary):
-	# 1. Salva os dados gerados
-	world_data[chunk_coord] = chunk_data;
-	# 2. Remove do rastreamento
-	chunks_in_generation.erase(chunk_coord);
 
-	# 3. VERIFICAÇÃO CRÍTICA: O jogador ainda quer este chunk?
-	# Ele pode ter se movido para longe enquanto o thread trabalhava.
+	world_data[chunk_coord] = chunk_data;
+
+	if chunks_in_generation.has(chunk_coord):
+		var finished_thread: Thread = chunks_in_generation[chunk_coord];
+		finished_thread.wait_to_finish();
+		chunks_in_generation.erase(chunk_coord);
+
 	var desired_chunks = {};
 	var chunk_range = _get_current_chunk_range();
 
@@ -156,107 +145,199 @@ func _on_data_generated(chunk_coord: Vector2i, chunk_data: Dictionary):
 			desired_chunks[Vector2i(x, y)] = true;
 
 	if not desired_chunks.has(chunk_coord):
-		# Jogador se moveu. Não fazemos nada.
-		# Os dados ficam salvos em world_data para uso futuro.
 		return;
 
-	# 4. Se o chunk ainda é desejado, instanciamos ele.
 	_instantiate_chunk(chunk_coord, chunk_data);
 #}
 
 
-# NOVO: Função separada para instanciação (roda na thread principal)
 func _instantiate_chunk(chunk_coord: Vector2i, chunk_data: Dictionary):
-	# Este código é o conteúdo original de load_chunk
+
 	var new_chunk_node: WorldChunk = WORLD_CHUNK_SCENE.instantiate();
 	new_chunk_node.name = "Chunk_%s_%s" % [chunk_coord.x, chunk_coord.y];
 	add_child(new_chunk_node);
 	new_chunk_node.initialize(chunk_data);
-
 	new_chunk_node.position = get_world_pos_from_chunk_coords(chunk_coord);
-
 	active_chunks[chunk_coord] = new_chunk_node;
+
+	if chunk_data.water_tiles:
+		_prepare_water_tiles(chunk_coord, chunk_data.water_tiles);
+	#}
+#}
+
+
+func _prepare_water_tiles(chunk_coord: Vector2i, water_tiles: Dictionary) -> void:
+
+	var key = "%s_%s" % [chunk_coord.x, chunk_coord.y];
+	_water_changeset_chunks[key] = BetterTerrain.create_terrain_changeset(water_layer, water_tiles);
+#}
+
+
+func _paint_water_tiles() -> void:
+
+	var applied_keys = [];
+	var neighbor_update_list: Array[Vector2i] = [];
+
+	for key in _water_changeset_chunks:
+		var changeset: Dictionary = _water_changeset_chunks[key];
+
+		if changeset.is_empty():
+			applied_keys.append(key);
+			continue;
+
+		if BetterTerrain.is_terrain_changeset_ready(changeset):
+			BetterTerrain.apply_terrain_changeset(changeset);
+			applied_keys.append(key);
+
+			var parts: PackedStringArray;
+			var coord_str: String = "";
+
+			if key.begins_with("unload_"):
+				coord_str = key.trim_prefix("unload_");
+			else:
+				coord_str = key;
+
+			parts = coord_str.split("_");
+
+			if parts.size() == 2:
+				var coord = Vector2i(int(parts[0]), int(parts[1]));
+				neighbor_update_list.append(coord);
+		#} endif is_terrain_ready
+
+	## --- Erase all applied keys ---
+	for key in applied_keys:
+		_water_changeset_chunks.erase(key);
+
+	## --- NEW: Process neighbor updates *after* applying changes ---
+	var unique_neighbors_to_update: Dictionary = {}
+	for chunk_coord in neighbor_update_list:
+		var neighbors: Array[Vector2i] = [
+			chunk_coord + Vector2i.LEFT,
+			chunk_coord + Vector2i.RIGHT,
+			chunk_coord + Vector2i.UP,
+			chunk_coord + Vector2i.DOWN
+		];
+
+		for n_coord in neighbors:
+			if active_chunks.has(n_coord): # Only update active neighbors
+				unique_neighbors_to_update[n_coord] = true; # Use dictionary to avoid duplicates
+
+	# Now, re-queue changesets for all unique neighbors
+	for n_coord in unique_neighbors_to_update:
+		if world_data.has(n_coord) and world_data[n_coord].water_tiles:
+			_prepare_water_tiles(n_coord, world_data[n_coord].water_tiles);
 #}
 
 
 func get_world_pos_from_chunk_coords(chunk_coord: Vector2i) -> Vector2:
-	return chunk_coord * CHUNK_SIZE_TILES * TILE_PIXELS;
+
+	return chunk_coord * CHUNK_SIZE_TILES * TILE_SIZE_PIXELS;
 #}
 
 
 func get_chunk_coords_from_world(world_pos: Vector2) -> Vector2i:
-	var tile_coord = (world_pos / TILE_PIXELS).floor()
+
+	var tile_coord = (world_pos / TILE_SIZE_PIXELS).floor()
 	var chunk_coord = (tile_coord / CHUNK_SIZE_TILES).floor()
 	return chunk_coord as Vector2i
 #}
 
 
 func unload_chunk(chunk_coord: Vector2i):
+
 	if active_chunks.has(chunk_coord):
 		var chunk_node = active_chunks[chunk_coord];
 		chunk_node.queue_free();
 		active_chunks.erase(chunk_coord);
+
+	var load_key = "%s_%s" % [chunk_coord.x, chunk_coord.y];
+	if _water_changeset_chunks.has(load_key):
+		_water_changeset_chunks.erase(load_key);
+
+	if world_data.has(chunk_coord) and world_data[chunk_coord].water_tiles:
+		var tiles_to_clear: Dictionary = {};
+
+		for global_tile_coord in world_data[chunk_coord].water_tiles:
+			tiles_to_clear[global_tile_coord] = -1; # -1 means "no terrain"
+
+		# Use a unique key for the unload operation
+		var unload_key = "unload_%s_%s" % [chunk_coord.x, chunk_coord.y];
+		_water_changeset_chunks[unload_key] = BetterTerrain.create_terrain_changeset(water_layer, tiles_to_clear);
 #}
 
 
 func generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
+
 	var data = {
-		"water_terrain": {},
-		"water_tiles": [],  # is an array cause use terrain
-		"ground_tiles": [], # is an array cause use terrain
+		"water_tiles": {},
+		"ground_tiles": [],
 		"grass_tiles": {},
 		"trees_tiles": {},
-		"poi": ""
+		"poi": []
 	}
+	var local_tile_coords: Vector2i = Vector2i.ZERO;
+	var global_tile_x = 0;
+	var global_tile_y = 0;
+	var global_tile_coords: Vector2i = Vector2i.ZERO;
+	var noise_value: float = 0.0;
+	#var poi_noise_val = noise.get_noise_2d(chunk_coord.x, chunk_coord.y);
+	var is_ground_filled: bool = false;
+	var chosen_tree: Dictionary = {};
+	var chosen_grass: Dictionary = {};
+	var chosen_poi: Dictionary = {};
 
 	for x in range(CHUNK_SIZE_TILES):
 		for y in range(CHUNK_SIZE_TILES):
 
-			var global_tile_x := chunk_coord.x * CHUNK_SIZE_TILES + x;
-			var global_tile_y := chunk_coord.y * CHUNK_SIZE_TILES + y;
-			var noise_value := noise.get_noise_2d(global_tile_x,global_tile_y);
-			var local_tile_coords: Vector2i = Vector2i(x, y);
+			global_tile_x = chunk_coord.x * CHUNK_SIZE_TILES + x;
+			global_tile_y = chunk_coord.y * CHUNK_SIZE_TILES + y;
+			global_tile_coords = Vector2i(global_tile_x, global_tile_y);
+			noise_value = noise.get_noise_2d(global_tile_x,global_tile_y);
+			local_tile_coords = Vector2i(x, y);
 
-			if noise_value >= ground_noise_value_threshold:
-				var is_ground_filled : bool = false;
+			if noise_value >= GROUND_NOISE_VALUE_THRESHOLD:
+				is_ground_filled = false;
 
-				if noise_value >= trees_noise_value_threshold:
-					if randf() < trees_placement_density:
-						var chosen_tree: Dictionary = _pick_weighted_random(trees_atlas_coord_array);
+				if noise_value >= TREES_NOISE_VALUE_THRESHOLD:
+					if randf() < TREES_PLACEMENT_DENSITY:
+						chosen_tree = _pick_weighted_random(TREES_ATLAS_OPTIONS);
 
 						data["trees_tiles"][local_tile_coords] = chosen_tree.coords;
 						is_ground_filled = true
 				#} endif treenoise
 
 				if not is_ground_filled:
-					if randf() < grass_placement_density:
-						var chosen_grass: Dictionary = _pick_weighted_random(grass_atlas_coord_array);
+					if randf() < GRASS_PLACEMENT_DENSITY:
+						chosen_grass = _pick_weighted_random(GRASS_ATLAS_OPTIONS);
 						data["grass_tiles"][local_tile_coords] = chosen_grass.coords;
 						is_ground_filled = true;
 				#} endif grass not is_ground_filled
 
+				if noise_value >= POI_NOISE_VALUE_THRESHOLD:
+					if randf() < POI_PLACEMENT_DENSITY:
+						chosen_poi = _pick_weighted_random(POI_OPTIONS);
+						chosen_poi.coords = local_tile_coords * TILE_SIZE_PIXELS;
+						data["poi"].append(chosen_poi);
+
 				if not is_ground_filled:
+					## Still without proper use, but registering where is ground.
 					data["ground_tiles"].append(local_tile_coords);
 				#} endif not is_ground_filled
 
 			else:
-				data["water_terrain"][local_tile_coords] = 0;
-				data["water_tiles"].append(local_tile_coords);
+				## Uses "0" for BetterTerrain type, since the "key" (global_tile_coords) is the X-Y coordinates
+				data["water_tiles"][global_tile_coords] = 0;
 			#} endif ground_noise_value
 
 		#} endfor y
 	#} endfor x
 
-	var poi_noise_val = noise.get_noise_2d(chunk_coord.x, chunk_coord.y)
-	if poi_noise_val > 0.6:
-		var chosen_poi: Dictionary = _pick_weighted_random(poi_options);
-		data["poi"] = chosen_poi.path;
-
 	return data;
 #}
 
-
+## Uses the "weight" attribute in the array element to pick accordingly
 func _pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
+
 	randomize();
 	var total_weight: float = 0.0;
 	for item in array:
@@ -267,7 +348,7 @@ func _pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
 	for item in array:
 		random_pick -= item.weight;
 		if random_pick <= 0.0:
-			return item;
+			return item.duplicate();
 
 	return array.back();
 #}
@@ -283,6 +364,7 @@ func _get_current_chunk_range() -> Dictionary:
 		"vertical": y_coords
 	};
 #}
+
 
 """ ============== DEBUG FEATURES ============== """
 #region
