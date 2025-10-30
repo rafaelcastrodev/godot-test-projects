@@ -44,6 +44,7 @@ func initialize(chunk_data: Dictionary) -> void:
 			var poi_instance = poi_scene.instantiate();
 			poi_layer.add_child(poi_instance);
 			poi_instance.position = poi.coords;
+			print(poi.coords)
 	#}
 
 
