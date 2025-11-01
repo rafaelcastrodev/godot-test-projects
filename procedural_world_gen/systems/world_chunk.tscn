@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://c235x5lt5altl"]
 
-[ext_resource type="Script" uid="uid://teka1xk4oatp" path="res://world_chunk.gd" id="1_kyhsy"]
+[ext_resource type="Script" uid="uid://teka1xk4oatp" path="res://systems/world_chunk.gd" id="1_kyhsy"]
 [ext_resource type="TileSet" uid="uid://cylxcujxyjiaf" path="res://assets/tiles_vegetation.tres" id="3_smbfp"]
 
 [node name="WorldChunk" type="Node2D"]

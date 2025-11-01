@@ -1,8 +1,7 @@
-[gd_scene load_steps=8 format=3 uid="uid://bx5017jm23m3x"]
+[gd_scene load_steps=7 format=3 uid="uid://bx5017jm23m3x"]
 
-[ext_resource type="Script" uid="uid://bog8mv1lk6myy" path="res://__notes.gd" id="1_feb5d"]
 [ext_resource type="Texture2D" uid="uid://ba7fpmkkx5vo5" path="res://assets/bg_dark_layer.png" id="3_7jktm"]
-[ext_resource type="Script" uid="uid://ccbktmutpsinj" path="res://chunk_world_manager.gd" id="3_ryrav"]
+[ext_resource type="Script" uid="uid://ccbktmutpsinj" path="res://systems/world_chunk_manager.gd" id="3_ryrav"]
 [ext_resource type="TileSet" uid="uid://g6m8tikxkaia" path="res://assets/tiles_water.tres" id="4_7jktm"]
 [ext_resource type="Texture2D" uid="uid://b2x21aovyn1qv" path="res://icon.svg" id="4_fc0e3"]
 
@@ -16,11 +15,7 @@ script/source = "extends CharacterBody2D
 func _physics_process(delta: float):
 
 	var input_direction = Input.get_vector(\"ui_left\", \"ui_right\", \"ui_up\", \"ui_down\")
-
-
 	velocity = input_direction * speed * delta
-
-
 	move_and_slide()
 "
 
@@ -28,10 +23,12 @@ func _physics_process(delta: float):
 
 [node name="Game" type="Node2D"]
 
-[node name="BGDarkLayer" type="CanvasLayer" parent="."]
+[node name="____DEGUB_PURPOSES____" type="Node" parent="."]
+
+[node name="BGDarkLayer" type="CanvasLayer" parent="____DEGUB_PURPOSES____"]
 layer = -2
 
-[node name="TextureRect" type="TextureRect" parent="BGDarkLayer"]
+[node name="TextureRect" type="TextureRect" parent="____DEGUB_PURPOSES____/BGDarkLayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -41,33 +38,31 @@ texture = ExtResource("3_7jktm")
 expand_mode = 2
 stretch_mode = 1
 
-[node name="__NOTES" type="Node" parent="."]
-script = ExtResource("1_feb5d")
-
-[node name="WorldManager" type="Node2D" parent="." node_paths=PackedStringArray("player")]
-script = ExtResource("3_ryrav")
-player = NodePath("../CharacterBody2D")
-
-[node name="LayerWater" type="TileMapLayer" parent="WorldManager"]
-z_index = -1
-tile_set = ExtResource("4_7jktm")
-
-[node name="CharacterBody2D" type="CharacterBody2D" parent="."]
+[node name="CharacterBody2D" type="CharacterBody2D" parent="____DEGUB_PURPOSES____"]
 position = Vector2(350, 236)
 script = SubResource("GDScript_fc0e3")
+metadata/_edit_lock_ = true
 
-[node name="Camera2D" type="Camera2D" parent="CharacterBody2D"]
+[node name="Camera2D" type="Camera2D" parent="____DEGUB_PURPOSES____/CharacterBody2D"]
 offset = Vector2(8, 8)
 zoom = Vector2(2, 2)
 metadata/_edit_lock_ = true
 
-[node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
+[node name="Sprite2D" type="Sprite2D" parent="____DEGUB_PURPOSES____/CharacterBody2D"]
 scale = Vector2(0.125, 0.125)
 texture = ExtResource("4_fc0e3")
 centered = false
 metadata/_edit_lock_ = true
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="____DEGUB_PURPOSES____/CharacterBody2D"]
 position = Vector2(8, 8)
 shape = SubResource("CircleShape2D_7jktm")
 metadata/_edit_lock_ = true
+
+[node name="WorldManager" type="Node2D" parent="." node_paths=PackedStringArray("player")]
+script = ExtResource("3_ryrav")
+player = NodePath("../____DEGUB_PURPOSES____/CharacterBody2D")
+
+[node name="LayerWater" type="TileMapLayer" parent="WorldManager"]
+z_index = -1
+tile_set = ExtResource("4_7jktm")
