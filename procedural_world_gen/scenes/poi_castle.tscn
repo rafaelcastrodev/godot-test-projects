@@ -1,26 +1,26 @@
-[gd_scene load_steps=5 format=3 uid="uid://dghi3y4ks1mmb"]
+[gd_scene load_steps=5 format=3 uid="uid://bppusw2kebatn"]
 
-[ext_resource type="Texture2D" uid="uid://b3103dhsac87f" path="res://assets/tiles.png" id="1_xu66r"]
+[ext_resource type="Texture2D" uid="uid://cylyful6qk0gq" path="res://assets/tiles_poi.png" id="1_vts7k"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ul82v"]
 size = Vector2(16, 16)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_6jrba"]
-atlas = ExtResource("1_xu66r")
-region = Rect2(180, 18, 16, 16)
+[sub_resource type="AtlasTexture" id="AtlasTexture_ckr4f"]
+atlas = ExtResource("1_vts7k")
+region = Rect2(18, 18, 16, 16)
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_1jvnv"]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_6jrba")
+"texture": SubResource("AtlasTexture_ckr4f")
 }],
 "loop": true,
 "name": &"default",
 "speed": 5.0
 }]
 
-[node name="POI_Village" type="Area2D"]
+[node name="POI_Castle" type="Area2D"]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(8, 8)
@@ -33,4 +33,4 @@ sprite_frames = SubResource("SpriteFrames_1jvnv")
 visible = false
 offset_right = 16.0
 offset_bottom = 16.0
-color = Color(0.7808215, 0.00047187388, 0.7808161, 1)
+color = Color(0.7747388, 0.32248122, 0.116967626, 1)

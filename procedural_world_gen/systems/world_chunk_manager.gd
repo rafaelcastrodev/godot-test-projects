@@ -29,6 +29,10 @@ const GROUND_NOISE_VALUE_THRESHOLD: float = 0.0; # Noise values above this becom
 const TREES_NOISE_VALUE_THRESHOLD: float = 0.2; # Ground noise values above this *can* be trees
 const GRASS_NOISE_VALUE_THRESHOLD: float = 0.03; # Ground noise values above this *can* be grass
 const POI_NOISE_VALUE_THRESHOLD: float = 0.03; # (Currently unused)
+const MIN_POI_PER_CHUNK: int = 0; # Mínimo de POIs a tentar colocar
+const MAX_POI_PER_CHUNK: int = 3; # Máximo de POIs a tentar colocar
+const POI_ANTI_REPETITION_PENALTY: float = 0.1; # Multiplicador de peso após um POI ser escolhido (0.1 = 90% de redução)
+const POI_MIN_DISTANCE_TILES: int = TILE_SIZE_PIXELS;
 
 #region TILE DEFINITIONS
 # Weighted options for tile variations.
@@ -55,7 +59,17 @@ const POI_OPTIONS: Array[Dictionary] = [
 	{
 		"scene": "res://scenes/poi_village.tscn",
 		"coords": Vector2i.ZERO, # This will be set during generation
-		"weight": 1
+		"weight": 0.5
+	},
+	{
+		"scene": "res://scenes/poi_castle.tscn",
+		"coords": Vector2i.ZERO, # This will be set during generation
+		"weight": 0.1
+	},
+	{
+		"scene": "res://scenes/poi_fortress.tscn",
+		"coords": Vector2i.ZERO, # This will be set during generation
+		"weight": 0.3
 	},
 ];
 #endregion
@@ -65,6 +79,7 @@ var _noise: Noise = null; # The main noise generator for terrain
 var _world_data: Dictionary = {}; # Caches all generated chunk data. {Vector2i: Dictionary}
 var _active_chunks: Dictionary = {}; # Stores currently instantiated chunk nodes. {Vector2i: WorldChunk}
 var _chunks_in_generation: Dictionary = {}; # Tracks chunks being generated in threads. {Vector2i: Thread}
+var _chunks_to_generate_queue: Dictionary = {};
 var _current_player_chunk: Vector2i = Vector2i.ZERO; # The player's current chunk coordinate
 var _water_changeset_chunks: Dictionary = {}; # Pending autotile updates for the water layer. {String: Dictionary}
 
@@ -103,11 +118,10 @@ func _process(_delta: float) -> void:
 	# Check if player has moved to a new chunk
 	if new_player_chunk != _current_player_chunk:
 		_current_player_chunk = new_player_chunk;
+		_update_chunks(); # Trigger chunk loading/unloading
 
-	_update_chunks(); # Trigger chunk loading/unloading
-
-	# Apply any ready water autotile changesets
-	_paint_water_tiles();
+	_process_generation_queue(); # Processa a fila de geração e a fila de pintura de água a cada frame
+	_paint_water_tiles(); # Apply any ready water autotile changesets
 #}
 
 ##
@@ -181,21 +195,24 @@ func _get_current_chunk_range() -> Dictionary:
 ##
 func _load_chunk(chunk_coord: Vector2i):
 
-	var thread: Thread = null;
+	#var thread: Thread = null;
 
 	# 1. Check cache
 	if _world_data.has(chunk_coord):
 		_instantiate_chunk(chunk_coord, _world_data[chunk_coord]);
 	else:
 		# 2. Check thread limit
-		if _chunks_in_generation.size() >= MAX_GENERATION_THREADS:
-			return; # Will try again next frame in _update_chunks
+		#if _chunks_in_generation.size() >= MAX_GENERATION_THREADS:
+			#return; # Will try again next frame in _update_chunks
+
+		# (A função _update_chunks já verificou que não está ativo ou gerando)
+		_chunks_to_generate_queue[chunk_coord] = true;
 
 		# 3. Start generation thread
-		thread = Thread.new();
-		_chunks_in_generation[chunk_coord] = thread;
+		#thread = Thread.new();
+		#_chunks_in_generation[chunk_coord] = thread;
 		# Start the thread, binding the chunk_coord as an argument
-		thread.start(_generate_chunk_data_thread.bind(chunk_coord));
+		#thread.start(_generate_chunk_data_thread.bind(chunk_coord));
 #}
 
 ##
@@ -204,8 +221,12 @@ func _load_chunk(chunk_coord: Vector2i):
 ##	and defers the result back to the main thread.
 ##
 func _generate_chunk_data_thread(chunk_coord: Vector2i):
-
-	var chunk_data: Dictionary = _generate_chunk_data(chunk_coord);
+	var thread_local_noise = FastNoiseLite.new();
+	var chunk_data: Dictionary = {};
+	var thread_local_noise_seed = _noise.seed;
+	thread_local_noise.seed = thread_local_noise_seed;
+	thread_local_noise.noise_type = _noise.noise_type;
+	chunk_data = _generate_chunk_data(chunk_coord, thread_local_noise, thread_local_noise_seed);
 
 	# Safely call the main thread function when this thread is done
 	_on_chunk_data_generated.call_deferred(chunk_coord, chunk_data);
@@ -218,7 +239,7 @@ func _generate_chunk_data_thread(chunk_coord: Vector2i):
 ##	Iterates through every tile in the chunk, samples noise,
 ##	and decides what to place (water, ground, grass, trees).
 ##
-func _generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
+func _generate_chunk_data(chunk_coord: Vector2i, noise_gen: FastNoiseLite, thread_seed: int) -> Dictionary:
 
 	var data: Dictionary = {
 		"water_tiles": {}, # {global_coord: terrain_id}
@@ -235,8 +256,9 @@ func _generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
 	var is_ground_filled: bool = false; # Prevents placing grass AND trees on the same tile
 	var chosen_tree: Dictionary = {};
 	var chosen_grass: Dictionary = {};
-	var chosen_poi: Dictionary = {};
 	var poi_chosen_location: Vector2i;
+	var rng = RandomNumberGenerator.new();
+	rng.seed = hash(Vector2i(thread_seed, chunk_coord.x * 1000 + chunk_coord.y));
 
 	# Iterate over every tile *within* this chunk
 	for x in range(CHUNK_SIZE_TILES):
@@ -246,7 +268,7 @@ func _generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
 			global_tile_x = chunk_coord.x * CHUNK_SIZE_TILES + x;
 			global_tile_y = chunk_coord.y * CHUNK_SIZE_TILES + y;
 			global_tile_coords = Vector2i(global_tile_x, global_tile_y);
-			noise_value = _noise.get_noise_2d(global_tile_x,global_tile_y);
+			noise_value = noise_gen.get_noise_2d(global_tile_x,global_tile_y);
 			local_tile_coords = Vector2i(x, y);
 
 			# --- Main Generation Logic ---
@@ -255,8 +277,8 @@ func _generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
 
 				# 1. Try to place trees
 				if noise_value >= TREES_NOISE_VALUE_THRESHOLD:
-					if randf() < TREES_PLACEMENT_DENSITY:
-						chosen_tree = _pick_weighted_random(TREES_ATLAS_OPTIONS);
+					if rng.randf() < TREES_PLACEMENT_DENSITY:
+						chosen_tree = _pick_weighted_random(TREES_ATLAS_OPTIONS, rng);
 
 						data["trees_tiles"][local_tile_coords] = chosen_tree.coords;
 						is_ground_filled = true
@@ -264,8 +286,8 @@ func _generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
 
 				# 2. If no tree, try to place grass
 				if not is_ground_filled:
-					if randf() < GRASS_PLACEMENT_DENSITY:
-						chosen_grass = _pick_weighted_random(GRASS_ATLAS_OPTIONS);
+					if rng.randf() < GRASS_PLACEMENT_DENSITY:
+						chosen_grass = _pick_weighted_random(GRASS_ATLAS_OPTIONS, rng);
 						data["grass_tiles"][local_tile_coords] = chosen_grass.coords;
 						is_ground_filled = true;
 				#} endif grass not is_ground_filled
@@ -285,13 +307,59 @@ func _generate_chunk_data(chunk_coord: Vector2i) -> Dictionary:
 		#} endfor y
 	#} endfor x
 
-	# After generating tiles, try to place a POI
-	if not data["ground_tiles"].is_empty():
-		poi_chosen_location = data["ground_tiles"].pick_random();
-		chosen_poi = _pick_weighted_random(POI_OPTIONS);
-		chosen_poi.coords = poi_chosen_location; # Set the chosen location
-		data["poi"].append(chosen_poi);
+	# 1. Criar cópias mutáveis dos dados que vamos modificar
+	var available_ground_tiles: Array = data["ground_tiles"].duplicate();
+	var current_poi_options: Array[Dictionary] = [];
+	for poi_option in POI_OPTIONS:
+		current_poi_options.append(poi_option.duplicate(true)); # Cópia profunda
+
+	# 2. Determinar quantos POIs tentar colocar neste chunk
+	var poi_count_to_place = rng.randi_range(MIN_POI_PER_CHUNK, MAX_POI_PER_CHUNK);
+
+	for i in range(poi_count_to_place):
+
+		# 3. Parar se não houver mais locais ou POIs válidos
+		var total_weight = _get_total_poi_weight(current_poi_options);
+		if available_ground_tiles.is_empty() or total_weight <= 0.0:
+			break; # Não há mais locais ou POIs para escolher
+
+		# 4. Escolher um tipo de POI (com base no peso atual)
+		var chosen_poi_copy: Dictionary = _pick_weighted_random(current_poi_options, rng);
+
+		# 5. Escolher um local
+		var location_index: int = rng.randi_range(0, available_ground_tiles.size() - 1);
+		poi_chosen_location = available_ground_tiles[location_index];
+		#available_ground_tiles.remove_at(location_index); # Garante que este tile não seja usado novamente
+
+		# 6. Salvar o POI
+		# If you want to centralize the POI add (Vector2i.ONE * TILE_SIZE_PIXELS / 2) to position.
+		var pixel_position = (poi_chosen_location * TILE_SIZE_PIXELS);
+		print(pixel_position)
+		chosen_poi_copy.coords = pixel_position;
+		data["poi"].append(chosen_poi_copy);
+
+		# 7. Aplicar a penalidade de repetição (Modifica a lista 'current_poi_options')
+		# Encontra o POI na lista (pelo "scene", que age como ID) e reduz seu peso
+		for poi_option in current_poi_options:
+			if poi_option.scene == chosen_poi_copy.scene:
+				poi_option.weight = poi_option.weight * POI_ANTI_REPETITION_PENALTY;
+				break; # Para o loop interno
+
+		# 8. [NOVA LÓGICA] Remover a "zona de exclusão" de tiles disponíveis
+		# Iteramos de trás para frente para remover itens com segurança
+		var idx = available_ground_tiles.size() - 1
+		while idx >= 0:
+			var tile_coord: Vector2i = available_ground_tiles[idx]
+
+			# Se o tile estiver dentro da distância mínima, remova-o
+			if tile_coord.distance_to(poi_chosen_location) < float(POI_MIN_DISTANCE_TILES):
+				available_ground_tiles.remove_at(idx)
+
+			idx -= 1
+		#} endwhile
+	#} endfor
 	#}
+
 	return data;
 #}
 
@@ -381,6 +449,48 @@ func _instantiate_chunk(chunk_coord: Vector2i, chunk_data: Dictionary):
 	if chunk_data.water_tiles:
 		_prepare_water_tiles(chunk_coord, chunk_data.water_tiles);
 		_update_water_neighbors(chunk_coord);
+	#}
+#}
+
+
+##
+##	[NOVA FUNÇÃO]
+##	Checks the generation queue and starts new threads
+##	if there are free slots.
+##
+func _process_generation_queue() -> void:
+
+	# Continua pegando itens da fila enquanto houver slots de thread livres
+	# E enquanto a fila não estiver vazia
+	while _chunks_in_generation.size() < MAX_GENERATION_THREADS and not _chunks_to_generate_queue.is_empty():
+
+		# Pega o próximo chunk da fila
+		var chunk_coord: Vector2i = _chunks_to_generate_queue.keys().front();
+		_chunks_to_generate_queue.erase(chunk_coord); # Remove da fila
+
+		# Verificação de segurança:
+		# O chunk já foi gerado enquanto estava na fila? (muito raro)
+		# O chunk ainda está na área de carregamento? (o jogador pode ter se movido rápido)
+
+		if _world_data.has(chunk_coord) or _chunks_in_generation.has(chunk_coord):
+			continue; # Já foi ou está sendo processado, pule.
+
+		# Verifica se o jogador se moveu para longe enquanto o chunk estava na fila
+		var chunk_range = _get_current_chunk_range();
+		var is_in_range = (
+			chunk_coord.x >= chunk_range.horizontal.x and
+			chunk_coord.x < chunk_range.horizontal.y and
+			chunk_coord.y >= chunk_range.vertical.x and
+			chunk_coord.y < chunk_range.vertical.y
+		);
+
+		if not is_in_range:
+			continue; # O jogador se moveu, não precisamos mais gerar este chunk.
+
+		# --- Se passou em tudo, inicie a thread ---
+		var thread: Thread = Thread.new();
+		_chunks_in_generation[chunk_coord] = thread;
+		thread.start(_generate_chunk_data_thread.bind(chunk_coord));
 	#}
 #}
 
@@ -482,7 +592,7 @@ func _unload_chunk(chunk_coord: Vector2i):
 ##	Selects a random item from an array of dictionaries
 ##	based on their "weight" key.
 ##
-func _pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
+func _pick_weighted_random(array: Array[Dictionary], rng: RandomNumberGenerator) -> Dictionary:
 
 	var total_weight: float = 0.0;
 	var random_pick: float = 0.0;
@@ -492,7 +602,7 @@ func _pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
 		total_weight += item.weight;
 
 	# Pick a random value within the total weight
-	random_pick = randf() * total_weight;
+	random_pick = rng.randf() * total_weight;
 
 	# Find the item corresponding to the random value
 	for item in array:
@@ -502,6 +612,18 @@ func _pick_weighted_random(array: Array[Dictionary]) -> Dictionary:
 			return item.duplicate();
 
 	return array.back(); # Fallback
+#}
+
+
+##
+##	Utility function.
+##	Calculates the sum of "weight" from an array of POI dictionaries.
+##
+func _get_total_poi_weight(poi_array: Array[Dictionary]) -> float:
+	var total: float = 0.0;
+	for item in poi_array:
+		total += item.weight;
+	return total;
 #}
 
 
