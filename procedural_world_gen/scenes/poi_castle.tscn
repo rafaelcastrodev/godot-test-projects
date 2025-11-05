@@ -30,7 +30,6 @@ shape = SubResource("RectangleShape2D_ul82v")
 sprite_frames = SubResource("SpriteFrames_1jvnv")
 
 [node name="ColorRect" type="ColorRect" parent="."]
-visible = false
 offset_right = 16.0
 offset_bottom = 16.0
 color = Color(0.7747388, 0.32248122, 0.116967626, 1)
